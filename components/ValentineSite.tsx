@@ -94,7 +94,6 @@ export default function ValentineSite() {
   };
 
   const yesAction = () => setFinalScreen(true);
-  const noAction = () => triggerSwapOnce();
 
   return (
     <div className="min-h-screen w-full bg-[#0d0d0d] text-[#f5f5f5] snap-y snap-mandatory overflow-y-scroll">
