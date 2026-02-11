@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Image from "next/image";
+import { useMemo, useRef, useState } from "react";
 
 type Photo = { src: string; alt: string };
 
@@ -31,15 +32,19 @@ export default function ValentineSite() {
   // --- “No swaps with Yes” states ---
   const [isHoveringNo, setIsHoveringNo] = useState(false);
 
+  // ✅ typed timer ref (removes window any usage)
+  const revealTimerRef = useRef<number | null>(null);
+
   const scrollTo = (id: string) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
+  // ✅ used (fixes unused-var warning)
   const closePhoto = () => setOpenPhoto(null);
 
   // Build a small grid for the “select photos of you & me” challenge.
-  // Tip: Mark the 2 “us” tiles as true. Here we use photo1 & photo2 as the “us” tiles by default.
+  // Tip: Mark the 2 “us” tiles as true. Here we use captcha1 & captcha2 as the “us” tiles by default.
   const captchaTiles: CaptchaTile[] = useMemo(() => {
     const tiles: CaptchaTile[] = [
       { kind: "photo", src: "/captcha/cat.jpg", alt: "cat", isUs: false },
@@ -139,7 +144,7 @@ export default function ValentineSite() {
             </div>
           </section>
 
-          {/* NEW: Romantic reCAPTCHA */}
+          {/* Romantic reCAPTCHA */}
           <section
             id="captcha"
             className="snap-center flex flex-col justify-center items-center h-screen px-8 text-center space-y-6"
@@ -193,11 +198,15 @@ export default function ValentineSite() {
                             aria-pressed={selected}
                           >
                             {tile.kind === "photo" ? (
-                              <img
-                                src={tile.src}
-                                alt={tile.alt}
-                                className="h-24 w-full object-cover"
-                              />
+                              <div className="relative h-24 w-full">
+                                <Image
+                                  src={tile.src}
+                                  alt={tile.alt}
+                                  fill
+                                  sizes="(max-width: 768px) 33vw, 160px"
+                                  className="object-cover"
+                                />
+                              </div>
                             ) : (
                               <div className="h-24 w-full flex items-center justify-center bg-[#262626] text-[#f5f5f5] text-sm tracking-wide">
                                 {tile.label}
@@ -240,8 +249,7 @@ export default function ValentineSite() {
             </div>
           </section>
 
-          {/* NEW: Who’s this? (blur → clear on hover/tap) */}
-
+          {/* Who’s this? (blur → clear on hover/tap) */}
           <section
             id="section-who"
             className="snap-center flex flex-col justify-center items-center h-screen px-8 text-center space-y-6"
@@ -260,14 +268,20 @@ export default function ValentineSite() {
                 type="button"
                 onClick={() => setHerRevealed(true)}
                 onMouseEnter={() => {
-                  // reveal only if she stays hovering for 300ms (prevents accidental cursor reveal)
-                  const t = window.setTimeout(() => setHerRevealed(true), 300);
-                  (window as any).__revealTimer = t;
+                  // reveal only if she stays hovering for 300ms
+                  if (revealTimerRef.current) {
+                    window.clearTimeout(revealTimerRef.current);
+                  }
+                  revealTimerRef.current = window.setTimeout(
+                    () => setHerRevealed(true),
+                    300
+                  );
                 }}
                 onMouseLeave={() => {
-                  // if she leaves quickly, cancel reveal + revert
-                  const t = (window as any).__revealTimer as number | undefined;
-                  if (t) window.clearTimeout(t);
+                  if (revealTimerRef.current) {
+                    window.clearTimeout(revealTimerRef.current);
+                  }
+                  revealTimerRef.current = null;
                   setHerRevealed(false);
                 }}
                 onFocus={() => setHerRevealed(true)}
@@ -275,22 +289,26 @@ export default function ValentineSite() {
                 aria-label="Reveal who this is"
               >
                 {/* Blurred image (default) */}
-                <img
+                <Image
                   src="/her/blur.jpg"
                   alt="Mystery person (blurred)"
+                  fill
+                  sizes="(max-width: 768px) 288px, 320px"
                   className={[
-                    "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
+                    "object-cover transition-opacity duration-500",
                     herRevealed ? "opacity-0" : "opacity-100",
                     "group-hover:opacity-0",
                   ].join(" ")}
                 />
 
                 {/* Clear image (revealed) */}
-                <img
+                <Image
                   src="/her/her.jpg"
                   alt="Her"
+                  fill
+                  sizes="(max-width: 768px) 288px, 320px"
                   className={[
-                    "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
+                    "object-cover transition-opacity duration-500",
                     herRevealed ? "opacity-100" : "opacity-0",
                     "group-hover:opacity-100",
                   ].join(" ")}
@@ -378,17 +396,13 @@ export default function ValentineSite() {
                   className="group relative rounded-lg overflow-hidden"
                   aria-label={`Open photo ${index + 1}`}
                 >
-                  <img
+                  <Image
                     src={photo.src}
                     alt={photo.alt}
-                    className="
-            w-40 h-40 md:w-48 md:h-48
-            object-cover
-            filter grayscale
-            transition-all duration-300
-            group-hover:grayscale-0
-            group-hover:scale-[1.08]
-          "
+                    width={192}
+                    height={192}
+                    sizes="(max-width: 768px) 160px, 192px"
+                    className="w-40 h-40 md:w-48 md:h-48 object-cover filter grayscale transition-all duration-300 group-hover:grayscale-0 group-hover:scale-[1.08]"
                   />
 
                   <div className="absolute inset-0 pointer-events-none ring-0 group-hover:ring-2 group-hover:ring-[#ffd700]/40 transition-all" />
@@ -483,7 +497,7 @@ export default function ValentineSite() {
             </div>
           </section>
 
-          {/* Section 8 – Ask (swap while hovering the button area, revert on leave) */}
+          {/* Section 8 – Ask */}
           <section
             id="section-ask"
             className="snap-center flex flex-col justify-center items-center h-screen px-8 text-center space-y-6"
@@ -559,7 +573,7 @@ export default function ValentineSite() {
       {openPhoto && (
         <div
           className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6"
-          onClick={() => setOpenPhoto(null)}
+          onClick={closePhoto}
         >
           <div
             className="relative max-w-3xl w-full"
@@ -567,17 +581,22 @@ export default function ValentineSite() {
           >
             <button
               type="button"
-              onClick={() => setOpenPhoto(null)}
+              onClick={closePhoto}
               className="absolute -top-12 right-0 px-3 py-2 bg-[#2a2a2a] rounded-lg hover:bg-[#333] transition-colors"
             >
               Close
             </button>
 
-            <img
-              src={openPhoto.src}
-              alt={openPhoto.alt}
-              className="w-full h-auto max-h-[80vh] object-contain rounded-2xl shadow-2xl"
-            />
+            <div className="relative w-full h-[80vh]">
+              <Image
+                src={openPhoto.src}
+                alt={openPhoto.alt}
+                fill
+                sizes="(max-width: 768px) 100vw, 80vw"
+                className="object-contain rounded-2xl shadow-2xl"
+                priority
+              />
+            </div>
           </div>
         </div>
       )}
